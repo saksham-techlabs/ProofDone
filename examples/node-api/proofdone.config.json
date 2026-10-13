@@ -1,0 +1,38 @@
+{
+  "version": 1,
+  "checks": [
+    { "id": "tests", "name": "Tests", "type": "command", "command": "npm test", "timeoutMs": 120000 },
+    {
+      "id": "required-files",
+      "name": "Required files",
+      "type": "files",
+      "mustExist": ["package.json", "README.md", ".env.example", "src/server.js"],
+      "mustNotExist": [".env"]
+    },
+    {
+      "id": "no-debug-leftovers",
+      "name": "No debug leftovers",
+      "type": "file-content",
+      "path": "src/server.js",
+      "notContains": ["debugger", "TODO", "FIXME"]
+    },
+    {
+      "id": "health",
+      "name": "HTTP health endpoint",
+      "type": "http",
+      "url": "http://localhost:3000/health",
+      "expectStatus": 200,
+      "bodyContains": "\"status\":\"ok\"",
+      "timeoutMs": 3000
+    },
+    { "id": "git-clean", "name": "Git working tree", "type": "git-clean" },
+    {
+      "id": "container",
+      "name": "Docker health",
+      "type": "docker",
+      "container": "node-api",
+      "expect": "healthy",
+      "required": false
+    }
+  ]
+}

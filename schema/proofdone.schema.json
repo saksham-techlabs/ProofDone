@@ -1,0 +1,185 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ProofDone configuration",
+  "description": "Configuration for `proofdone verify`. The CLI performs its own validation; this schema provides editor completion.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["checks"],
+  "properties": {
+    "$schema": { "type": "string" },
+    "version": { "const": 1, "description": "Config format version. Only 1 is supported." },
+    "checks": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "oneOf": [
+          { "$ref": "#/$defs/command" },
+          { "$ref": "#/$defs/gitRepo" },
+          { "$ref": "#/$defs/gitClean" },
+          { "$ref": "#/$defs/gitBranch" },
+          { "$ref": "#/$defs/gitUpstream" },
+          { "$ref": "#/$defs/files" },
+          { "$ref": "#/$defs/fileContent" },
+          { "$ref": "#/$defs/http" },
+          { "$ref": "#/$defs/docker" }
+        ]
+      }
+    }
+  },
+  "$defs": {
+    "id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$",
+      "description": "Unique check id (used by --only and in JSON output)."
+    },
+    "name": { "type": "string", "minLength": 1, "description": "Display name. Defaults to the id." },
+    "required": {
+      "type": "boolean",
+      "default": true,
+      "description": "Whether this check affects the final verdict."
+    },
+    "timeoutMs": { "type": "integer", "minimum": 1, "maximum": 86400000 },
+    "relativePath": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Path relative to the directory containing the config file. Must stay inside it."
+    },
+    "nonEmptyStrings": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+    "command": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "type", "command"],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "name": { "$ref": "#/$defs/name" },
+        "required": { "$ref": "#/$defs/required" },
+        "timeoutMs": { "$ref": "#/$defs/timeoutMs", "default": 600000 },
+        "type": { "const": "command" },
+        "command": { "type": "string", "minLength": 1, "description": "Shell command to run." },
+        "cwd": { "$ref": "#/$defs/relativePath" },
+        "env": { "type": "object", "additionalProperties": { "type": "string" } },
+        "expectExitCode": { "type": "integer", "minimum": 0, "maximum": 255, "default": 0 }
+      }
+    },
+    "gitRepo": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "type"],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "name": { "$ref": "#/$defs/name" },
+        "required": { "$ref": "#/$defs/required" },
+        "timeoutMs": { "$ref": "#/$defs/timeoutMs" },
+        "type": { "const": "git-repo" }
+      }
+    },
+    "gitClean": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "type"],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "name": { "$ref": "#/$defs/name" },
+        "required": { "$ref": "#/$defs/required" },
+        "timeoutMs": { "$ref": "#/$defs/timeoutMs" },
+        "type": { "const": "git-clean" },
+        "allowUntracked": { "type": "boolean", "default": false }
+      }
+    },
+    "gitBranch": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "type", "expected"],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "name": { "$ref": "#/$defs/name" },
+        "required": { "$ref": "#/$defs/required" },
+        "timeoutMs": { "$ref": "#/$defs/timeoutMs" },
+        "type": { "const": "git-branch" },
+        "expected": { "type": "string", "minLength": 1 }
+      }
+    },
+    "gitUpstream": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "type"],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "name": { "$ref": "#/$defs/name" },
+        "required": { "$ref": "#/$defs/required" },
+        "timeoutMs": { "$ref": "#/$defs/timeoutMs" },
+        "type": { "const": "git-upstream" },
+        "allowAhead": { "type": "boolean", "default": false },
+        "allowBehind": { "type": "boolean", "default": false }
+      }
+    },
+    "files": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "type"],
+      "anyOf": [{ "required": ["mustExist"] }, { "required": ["mustNotExist"] }],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "name": { "$ref": "#/$defs/name" },
+        "required": { "$ref": "#/$defs/required" },
+        "timeoutMs": { "$ref": "#/$defs/timeoutMs" },
+        "type": { "const": "files" },
+        "mustExist": { "type": "array", "items": { "$ref": "#/$defs/relativePath" } },
+        "mustNotExist": { "type": "array", "items": { "$ref": "#/$defs/relativePath" } }
+      }
+    },
+    "fileContent": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "type", "path"],
+      "anyOf": [{ "required": ["contains"] }, { "required": ["notContains"] }],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "name": { "$ref": "#/$defs/name" },
+        "required": { "$ref": "#/$defs/required" },
+        "timeoutMs": { "$ref": "#/$defs/timeoutMs" },
+        "type": { "const": "file-content" },
+        "path": { "$ref": "#/$defs/relativePath" },
+        "contains": { "$ref": "#/$defs/nonEmptyStrings" },
+        "notContains": { "$ref": "#/$defs/nonEmptyStrings" },
+        "ignoreCase": { "type": "boolean", "default": false }
+      }
+    },
+    "http": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "type", "url"],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "name": { "$ref": "#/$defs/name" },
+        "required": { "$ref": "#/$defs/required" },
+        "timeoutMs": { "$ref": "#/$defs/timeoutMs", "default": 5000 },
+        "type": { "const": "http" },
+        "url": { "type": "string", "pattern": "^https?://" },
+        "method": { "enum": ["GET", "HEAD"], "default": "GET" },
+        "expectStatus": {
+          "oneOf": [
+            { "type": "integer", "minimum": 100, "maximum": 599 },
+            { "type": "array", "minItems": 1, "items": { "type": "integer", "minimum": 100, "maximum": 599 } }
+          ],
+          "description": "Accepted status code(s). Defaults to any 2xx."
+        },
+        "bodyContains": { "type": "string", "minLength": 1 }
+      }
+    },
+    "docker": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "type", "container"],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "name": { "$ref": "#/$defs/name" },
+        "required": { "$ref": "#/$defs/required" },
+        "timeoutMs": { "$ref": "#/$defs/timeoutMs", "default": 15000 },
+        "type": { "const": "docker" },
+        "container": { "type": "string", "minLength": 1 },
+        "expect": { "enum": ["exists", "running", "healthy"], "default": "running" }
+      }
+    }
+  }
+}

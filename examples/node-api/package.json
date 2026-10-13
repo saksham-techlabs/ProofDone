@@ -1,0 +1,14 @@
+{
+  "name": "proofdone-example-node-api",
+  "version": "1.0.0",
+  "private": true,
+  "description": "A tiny dependency-free Node.js API used to demonstrate ProofDone.",
+  "type": "module",
+  "scripts": {
+    "start": "node src/server.js",
+    "test": "node --test"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}

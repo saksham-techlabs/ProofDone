@@ -1,0 +1,40 @@
+# Security policy
+
+## Supported versions
+
+ProofDone is pre-1.0. Security fixes are made on the latest released version only.
+
+## Reporting a vulnerability
+
+Please **do not open a public issue** for security problems. Report them privately using the
+repository's GitHub private vulnerability reporting ("Security" tab, then "Report a vulnerability").
+Include steps to reproduce, the affected version, and the impact you expect.
+
+You can expect an acknowledgement within a few days. Once a fix is available, we will publish an
+advisory and credit you if you wish.
+
+## Threat model
+
+ProofDone is a local verification tool. Understanding what it trusts helps you use it safely.
+
+**The config file is trusted input.** `command` checks run the configured shell commands with
+the permissions of the user running ProofDone. A malicious `proofdone.config.json` can run
+arbitrary code, in the same way a malicious `package.json` script or Makefile can.
+
+- Review `proofdone.config.json` before running `proofdone verify` in a repository you did not
+  write. `proofdone validate` lists every command without executing anything.
+- In CI, treat changes to `proofdone.config.json` like changes to workflow files.
+- Do not let an AI agent change the config to make verification pass without reviewing it.
+
+**What ProofDone does to limit risk:**
+
+- Config paths must be relative and stay inside the project directory.
+- `http` checks only issue `GET`/`HEAD` requests to URLs in the config.
+- Git is invoked read-only (`GIT_OPTIONAL_LOCKS=0`, no fetch, no prompts).
+- Command output is truncated and passed through best-effort secret redaction (common token
+  formats and `env` values from the config). `file-content` never echoes matching lines.
+- Commands run with stdin closed and a timeout. On timeout the process tree is terminated.
+
+**Out of scope:** commands you configure doing harmful things, and secrets in output that do not
+match a known pattern. Redaction is a safety net, not a guarantee. Avoid printing secrets in
+build or test output.

@@ -1,0 +1,33 @@
+{
+  "$schema": "./schema/proofdone.schema.json",
+  "version": 1,
+  "checks": [
+    { "id": "typecheck", "name": "Typecheck", "type": "command", "command": "npm run typecheck" },
+    { "id": "lint", "name": "Lint", "type": "command", "command": "npm run lint" },
+    { "id": "tests", "name": "Tests", "type": "command", "command": "npm test" },
+    { "id": "build", "name": "Build", "type": "command", "command": "npm run build" },
+    {
+      "id": "required-files",
+      "name": "Required files",
+      "type": "files",
+      "mustExist": [
+        "README.md",
+        "LICENSE",
+        "CONTRIBUTING.md",
+        "SECURITY.md",
+        "CHANGELOG.md",
+        "package-lock.json",
+        "dist/cli/main.js"
+      ],
+      "mustNotExist": [".env"]
+    },
+    {
+      "id": "license",
+      "name": "MIT license declared",
+      "type": "file-content",
+      "path": "package.json",
+      "contains": ["\"license\": \"MIT\""]
+    },
+    { "id": "git-clean", "name": "Git working tree", "type": "git-clean" }
+  ]
+}

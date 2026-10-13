@@ -1,0 +1,43 @@
+{
+  "version": 1,
+  "checks": [
+    { "id": "typecheck", "name": "Typecheck", "type": "command", "command": "npx tsc --noEmit" },
+    { "id": "lint", "name": "Lint", "type": "command", "command": "npm run lint" },
+    { "id": "build", "name": "Build", "type": "command", "command": "npm run build", "timeoutMs": 900000 },
+    { "id": "tests", "name": "Tests", "type": "command", "command": "npm test" },
+    {
+      "id": "required-files",
+      "name": "Required files",
+      "type": "files",
+      "mustExist": ["package.json", "README.md", ".env.example", "next.config.ts", "app/api/health/route.ts"],
+      "mustNotExist": [".env", ".env.local"]
+    },
+    {
+      "id": "env-example",
+      "name": "Env example documents required keys",
+      "type": "file-content",
+      "path": ".env.example",
+      "contains": ["DATABASE_URL=", "NEXTAUTH_SECRET="],
+      "notContains": ["sk_live_", "postgres://admin:"]
+    },
+    {
+      "id": "no-placeholder-copy",
+      "name": "Placeholder copy removed",
+      "type": "file-content",
+      "path": "app/page.tsx",
+      "notContains": ["Lorem ipsum", "Get started by editing"],
+      "ignoreCase": true
+    },
+    {
+      "id": "health",
+      "name": "HTTP health endpoint",
+      "type": "http",
+      "url": "http://localhost:3000/api/health",
+      "expectStatus": 200,
+      "bodyContains": "ok"
+    },
+    { "id": "branch", "name": "Feature branch", "type": "git-branch", "expected": "feature/billing", "required": false },
+    { "id": "git-clean", "name": "Git working tree", "type": "git-clean" },
+    { "id": "pushed", "name": "Pushed to remote", "type": "git-upstream", "required": false }
+  ]
+}

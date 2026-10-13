@@ -1,0 +1,90 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    name: ${{ matrix.os }} / Node ${{ matrix.node }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        node: [22, 24]
+    steps:
+      - name: Check out
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js ${{ matrix.node }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+          cache: npm
+
+      - name: Configure git identity for tests
+        run: |
+          git config --global user.name "ProofDone CI"
+          git config --global user.email "ci@example.invalid"
+          git config --global init.defaultBranch main
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Typecheck, lint, test, build, self-check
+        run: npm run check
+
+      - name: Dogfood - ProofDone verifies its own repository after the build
+        run: node dist/cli/main.js verify --only required-files,license,git-clean
+
+      - name: CLI smoke test against a temporary project
+        shell: bash
+        run: |
+          set -euo pipefail
+          tmp="$(mktemp -d)"
+          printf '# Demo\n' > "$tmp/README.md"
+          node dist/cli/main.js init --cwd "$tmp"
+          node dist/cli/main.js verify --cwd "$tmp"
+          set +e
+          rm "$tmp/README.md"
+          node dist/cli/main.js verify --cwd "$tmp" --json > "$tmp/report.json"
+          code=$?
+          set -e
+          test "$code" -eq 1
+          node -e "const r=require(process.argv[1]); if (r.verdict !== 'NOT_DONE') process.exit(1)" "$tmp/report.json"
+
+  package:
+    name: Package contents
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Pack (dry run)
+        run: npm pack --dry-run
+      - name: Install the packed tarball and run it
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm pack
+          tmp="$(mktemp -d)"
+          cd "$tmp"
+          npm init -y > /dev/null
+          npm install "$GITHUB_WORKSPACE"/proofdone-*.tgz
+          npx proofdone --version
+          npx proofdone --help

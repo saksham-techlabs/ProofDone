@@ -1,0 +1,10 @@
+export { loadConfig, resolveConfigPath, DEFAULT_CONFIG_FILE, type LoadedConfig } from './config/load.js';
+export { validateConfig, type ValidationResult } from './config/validate.js';
+export { runVerification, type RunVerificationOptions } from './core/runner.js';
+export { computeVerdict, exitCodeFor, EXIT_CODES } from './core/verdict.js';
+export { ProofDoneError, type ConfigIssue } from './core/errors.js';
+export { renderTextReport } from './reporters/text.js';
+export { CHECK_TYPES } from './checks/registry.js';
+export type { CheckDefinition, CheckContext, CheckOutcome } from './checks/definition.js';
+export { VERSION } from './version.js';
+export * from './types/index.js';
