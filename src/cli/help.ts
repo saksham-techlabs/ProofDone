@@ -63,8 +63,8 @@ ${CHECK_TYPES.map((type) => `  ${type.padEnd(14)} ${getDefinition(type).descript
 
 export const VALIDATE_HELP = `Usage: proofdone validate [options]
 
-Validates the config and prints every check, including the exact commands
-that "verify" would execute. Nothing is executed.
+Validates the config and prints every check and configured command.
+Recognized credentials are redacted from display. Nothing is executed.
 
 Options:
   --cwd <dir>        Directory to look for the config in (default: current directory)

@@ -3,6 +3,7 @@ import { ProofDoneError, errorMessage } from '../core/errors.js';
 import { EXIT_CODES } from '../core/verdict.js';
 import { renderJsonError } from '../reporters/json.js';
 import { VERSION } from '../version.js';
+import { sanitizeOutput } from '../core/output.js';
 import { runInit } from './commands/init.js';
 import { runValidate } from './commands/validate.js';
 import { runVerify } from './commands/verify.js';
@@ -110,8 +111,8 @@ export async function runCli(argv: readonly string[], io: CliIO): Promise<number
     if (wantsJson) {
       io.stdout.write(renderJsonError(code, message, issues));
     } else {
-      io.stderr.write(`proofdone: ${message}\n`);
-      for (const issue of issues) io.stderr.write(`  - ${issue.path}: ${issue.message}\n`);
+      io.stderr.write(sanitizeOutput(`proofdone: ${message}\n`));
+      for (const issue of issues) io.stderr.write(sanitizeOutput(`  - ${issue.path}: ${issue.message}\n`));
       if (code === 'USAGE') io.stderr.write('Run "proofdone --help" for usage.\n');
     }
     return EXIT_CODES.ERROR;

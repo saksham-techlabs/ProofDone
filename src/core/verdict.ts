@@ -78,7 +78,11 @@ export function computeVerdict(results: readonly CheckResult[], options: { stric
   const suffix = notes.length > 0 ? ` (${notes.join('; ')})` : '';
   return {
     verdict: 'DONE',
-    reason: `All ${plural(required.length, 'required check')} passed${suffix}.`,
+    reason: required.length === 0
+      ? `No required checks were selected${suffix}; this verdict establishes no required claims.`
+      : warned.length > 0
+        ? `No required checks failed${suffix}.`
+        : `All ${plural(required.length, 'required check')} passed${suffix}.`,
     summary,
   };
 }

@@ -132,7 +132,7 @@ Without `npm link`, run the CLI directly: `node /path/to/proofdone/dist/cli/main
 ```bash
 cd your-project
 proofdone init       # creates proofdone.config.json from what exists in the project
-proofdone validate   # shows every check and the exact commands verify will run
+proofdone validate   # shows checks and commands (recognized credentials redacted)
 proofdone verify     # runs the checks and prints the verdict
 ```
 
@@ -260,6 +260,8 @@ proofdone --version
 
 `validate` runs nothing. It confirms the config is valid and lists every command that `verify`
 would execute, which is useful before running ProofDone in a repository you did not write.
+Recognized credentials and terminal control characters are removed from displayed commands;
+review the config file itself when exact command bytes matter.
 
 ## Verdicts and exit codes
 
@@ -272,7 +274,7 @@ Only checks with `required: true` (the default) affect the verdict. The rules ap
 
 | Exit code | Meaning                                                                      |
 | --------- | ---------------------------------------------------------------------------- |
-| `0`       | **DONE**: every required check passed                                        |
+| `0`       | **DONE**: selected required checks passed or have warnings allowed without `--strict` |
 | `1`       | **NOT DONE**: a required check failed or errored                             |
 | `2`       | Usage, configuration or internal error: verification did not run             |
 | `3`       | **UNVERIFIED**: nothing failed, but a required check could not be verified   |
@@ -369,16 +371,18 @@ When verification cannot run (exit code 2), `--json` prints an error document in
 
 ## Security and safety model
 
-ProofDone is a **verifier**. It reads project state and reports on it. It does not:
+ProofDone is a **verifier**. Its built-in checks read project state and report on it.
+Except for user-configured `command` checks, verification does not:
 
 - modify, format or fix source code
 - delete files, commit, push, deploy, or start servers
 - run `git fetch` or anything else that changes repository state. `git status` runs with
   `GIT_OPTIONAL_LOCKS=0`, so it does not even refresh the index.
-- send network requests other than the `http` checks you configure (GET or HEAD only)
+- send HTTP requests other than configured `http` checks and their redirects. A Docker CLI
+  context may connect to a remote daemon.
 
-The only command that writes a file is `proofdone init`, which creates the config file and will
-not overwrite an existing one without `--force`.
+`proofdone init` writes the config file and will not overwrite it without `--force`.
+Configured shell commands can write files, access the network, or perform destructive actions.
 
 > **Important:** `command` checks run exactly the shell commands written in the config, with
 > your user's permissions. A config from an untrusted repository can run anything. **Review the
@@ -387,12 +391,17 @@ not overwrite an existing one without `--force`.
 
 Other safeguards:
 
-- Config paths must be relative and stay inside the project directory.
+- Paths inside the config must be relative and stay inside its directory, including resolved
+  symlink/junction targets. Dangling links produce ERROR. The CLI's `--cwd` and `--config`
+  options deliberately accept absolute paths; `init --force` follows an existing config symlink.
 - Commands run with stdin closed, so an interactive prompt cannot hang verification. Each command
-  has a timeout (default 10 minutes), and on timeout the whole process tree is terminated.
-- Captured output is trimmed to its tail and passed through a best-effort redaction of common
+  has a timeout (default 10 minutes), and on timeout ProofDone attempts to terminate its process
+  tree. Cleanup is best effort, not a sandbox; detached descendants may survive.
+- Captured command output is trimmed to its tail and passed through a best-effort redaction of common
   token formats (GitHub, OpenAI-style, AWS, Slack, npm, private keys, Bearer headers) and of any
-  `env` values from the config. Redaction is a safety net, not a guarantee.
+  `env` values of eight or more characters from the config. Redaction is a safety net, not a guarantee.
+  Commands inherit your environment; reports can expose paths, URLs, command text, body snippets,
+  and secrets that do not match known patterns. Review reports before sharing them.
 - `file-content` reports **line numbers** for forbidden text, never the matching lines.
 
 See [SECURITY.md](SECURITY.md) for how to report vulnerabilities.
@@ -436,7 +445,8 @@ Then verify the agent's claim yourself with `proofdone verify`. More patterns:
 
 ## Limitations
 
-- **ProofDone checks what you configure.** A passing verdict means the configured checks passed.
+- **ProofDone checks what you configure.** DONE covers only the selected required checks and
+  accepts warnings unless `--strict` is used. An optional-only run establishes no required claims.
   It does not mean the code is correct, secure, or that the tests are meaningful.
 - Commands are run, not analyzed. If your test script exits 0 without running tests, the check
   passes.
@@ -444,6 +454,11 @@ Then verify the agent's claim yourself with `proofdone verify`. More patterns:
 - Checks run sequentially, one at a time.
 - `file-content` matches literal text only (no regular expressions) in files up to 5 MB.
 - `http` supports GET and HEAD without custom headers or authentication.
+- HTTP bodies are inspected up to 1 MiB. If required text is absent from a truncated prefix,
+  the result is NOT_CHECKED; finding the required text is sufficient evidence for PASS.
+- Git output exceeding the capture limit produces ERROR, never a partial clean verdict.
+- Filesystem checks are snapshots, not protection against concurrent malicious filesystem changes.
+- Trust the environment and installed tools, including PATH, Git configuration and Docker context.
 - `docker` inspects containers through the `docker` CLI only (no Compose service names, no Podman).
 - Output redaction is best effort and pattern-based.
 - Not yet published to npm (see [Installation](#installation)).

@@ -2,6 +2,7 @@ import path from 'node:path';
 import { definitionFor } from '../../checks/registry.js';
 import { loadConfig, resolveConfigPath } from '../../config/load.js';
 import { VERSION } from '../../version.js';
+import { sanitizeOutput, sanitizeValue } from '../../core/output.js';
 import type { CliIO } from '../io.js';
 
 export interface ValidateOptions {
@@ -33,19 +34,19 @@ export async function runValidate(options: ValidateOptions, io: CliIO): Promise<
       checks,
       commands,
     };
-    io.stdout.write(`${JSON.stringify(payload, null, 2)}\n`);
+    io.stdout.write(`${JSON.stringify(sanitizeValue(payload), null, 2)}\n`);
     return 0;
   }
 
-  io.stdout.write(`Config is valid: ${loaded.configPath}\n\n`);
+  io.stdout.write(sanitizeOutput(`Config is valid: ${loaded.configPath}\n\n`));
   for (const check of checks) {
     const flag = check.required ? 'required' : 'optional';
-    io.stdout.write(`  ${check.id} [${check.type}, ${flag}]: ${check.description}\n`);
+    io.stdout.write(sanitizeOutput(`  ${check.id} [${check.type}, ${flag}]: ${check.description}\n`));
   }
   io.stdout.write('\n');
   if (commands.length > 0) {
     io.stdout.write('`proofdone verify` will execute these commands:\n');
-    for (const entry of commands) io.stdout.write(`  (${entry.cwd}) ${entry.command}\n`);
+    for (const entry of commands) io.stdout.write(sanitizeOutput(`  (${entry.cwd}) ${entry.command}\n`));
   } else {
     io.stdout.write('`proofdone verify` will not execute any shell commands.\n');
   }

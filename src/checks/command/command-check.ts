@@ -1,6 +1,6 @@
 import { stat } from 'node:fs/promises';
 import { formatDuration, sanitizeOutput, tailLines } from '../../core/output.js';
-import { resolveInProject } from '../../core/paths.js';
+import { realPathInProject, resolveInProject } from '../../core/paths.js';
 import { runProcess } from '../../core/process.js';
 import type { CommandCheckConfig } from '../../types/index.js';
 import type { CheckDefinition, CheckOutcome } from '../definition.js';
@@ -42,8 +42,9 @@ export const commandCheck: CheckDefinition<CommandCheckConfig> = {
   },
 
   async run(config, context): Promise<CheckOutcome> {
-    const cwd = config.cwd ? resolveInProject(context.projectRoot, config.cwd) : context.projectRoot;
-    const evidence: Record<string, unknown> = { command: config.command, cwd: config.cwd ?? '.' };
+    let cwd = config.cwd ? resolveInProject(context.projectRoot, config.cwd) : context.projectRoot;
+    const secrets = Object.values(config.env);
+    const evidence: Record<string, unknown> = { command: sanitizeOutput(config.command, secrets), cwd: config.cwd ?? '.' };
 
     if (!(await isDirectory(cwd))) {
       return {
@@ -51,6 +52,12 @@ export const commandCheck: CheckDefinition<CommandCheckConfig> = {
         summary: `Working directory does not exist: ${config.cwd ?? '.'}`,
         evidence,
       };
+    }
+
+    try {
+      cwd = await realPathInProject(context.projectRoot, cwd);
+    } catch {
+      return { status: 'ERROR', summary: 'Working directory cannot be resolved inside the project root', evidence };
     }
 
     const timeoutMs = config.timeoutMs ?? DEFAULT_COMMAND_TIMEOUT_MS;
@@ -61,7 +68,6 @@ export const commandCheck: CheckDefinition<CommandCheckConfig> = {
       env: { ...process.env, ...config.env },
     });
 
-    const secrets = Object.values(config.env);
     const stdout = sanitizeOutput(result.stdout, secrets);
     const stderr = sanitizeOutput(result.stderr, secrets);
     Object.assign(evidence, {
@@ -89,7 +95,7 @@ export const commandCheck: CheckDefinition<CommandCheckConfig> = {
     if (result.timedOut) {
       return {
         status: 'FAIL',
-        summary: `Timed out after ${formatDuration(timeoutMs)}; the process was terminated`,
+        summary: `Timed out after ${formatDuration(timeoutMs)}; process-tree termination requested`,
         details: outputTail.length ? ['Last output:', ...outputTail] : [],
         evidence,
       };

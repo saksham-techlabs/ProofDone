@@ -166,7 +166,10 @@ describe('git-upstream (real remote)', () => {
     git(root, 'init', '-b', 'main', work);
     await initRepo(work);
     git(work, 'remote', 'add', 'origin', remote);
-    git(work, 'push', '-u', 'origin', 'main', '-q');
+    // Model the last fetched state entirely locally; tests never need to push.
+    git(work, 'update-ref', 'refs/remotes/origin/main', git(work, 'rev-parse', 'HEAD').trim());
+    git(work, 'config', 'branch.main.remote', 'origin');
+    git(work, 'config', 'branch.main.merge', 'refs/heads/main');
   });
   after(async () => {
     await removeDir(root);
@@ -188,5 +191,25 @@ describe('git-upstream (real remote)', () => {
     assert.equal(outcome.evidence?.ahead, 1);
     const allowed = await gitUpstreamCheck.run(upstream({ allowAhead: true }), context(work));
     assert.equal(allowed.status, 'PASS');
+  });
+
+  it('detects behind and diverged local tracking refs without network access', async () => {
+    const local = git(work, 'rev-parse', 'HEAD').trim();
+    const previous = git(work, 'rev-parse', 'HEAD^').trim();
+    git(work, 'update-ref', 'refs/remotes/origin/main', local);
+    git(work, 'reset', '--hard', previous);
+    assert.equal((await gitUpstreamCheck.run(upstream(), context(work))).status, 'FAIL');
+    assert.equal((await gitUpstreamCheck.run(upstream({ allowBehind: true }), context(work))).status, 'PASS');
+    await writeFiles(work, { 'different.txt': 'different' });
+    git(work, 'add', '-A');
+    git(work, 'commit', '-m', 'diverged', '-q');
+    const diverged = await gitUpstreamCheck.run(upstream(), context(work));
+    assert.equal(diverged.status, 'FAIL');
+    assert.equal(diverged.evidence?.ahead, 1);
+    assert.equal(diverged.evidence?.behind, 1);
+    git(work, 'update-ref', '-d', 'refs/remotes/origin/main');
+    assert.equal((await gitUpstreamCheck.run(upstream(), context(work))).status, 'NOT_CHECKED');
+    git(work, 'checkout', '--detach');
+    assert.equal((await gitUpstreamCheck.run(upstream(), context(work))).status, 'NOT_CHECKED');
   });
 });

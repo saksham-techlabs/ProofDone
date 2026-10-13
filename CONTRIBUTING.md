@@ -5,7 +5,9 @@ types are all welcome.
 
 ## Development setup
 
-Requirements: Node.js 22 or newer and git. Docker is optional; the Docker check is tested with a
+Development requirements: Node.js 22.13+ in the 22.x line, or Node.js 24+, and git (ESLint's
+development requirement is stricter than the packaged CLI's Node.js 22+ minimum).
+Docker is optional; the Docker check is tested with a
 stand-in executable.
 
 ```bash
@@ -22,6 +24,7 @@ Individual scripts:
 | `npm test`          | Compiles to `.test-build/` and runs `node --test`              |
 | `npm run build`     | Compiles `src/` to `dist/`                                     |
 | `npm run selfcheck` | Validates this repository's own `proofdone.config.json`        |
+| `npm run smoke` | Builds, packs, installs locally, and tests the packaged CLI executable |
 
 Run the CLI locally with `node dist/cli/main.js <command>` after building, or `npm link`.
 

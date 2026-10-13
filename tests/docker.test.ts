@@ -12,7 +12,7 @@ import { base, context, makeTempDir, removeDir } from './helpers.js';
  */
 const FAKE_DOCKER = `
 const [mode, ...args] = process.argv.slice(2);
-if (args[0] !== 'inspect' || !args.includes('--format') || args.at(-1) !== 'web') {
+if (args[0] !== 'inspect' || !args.includes('--format') || args.at(-2) !== '--' || args.at(-1) !== 'web') {
   console.error('unexpected arguments: ' + args.join(' '));
   process.exit(99);
 }
@@ -20,6 +20,7 @@ const states = {
   running: { Status: 'running', Running: true },
   healthy: { Status: 'running', Running: true, Health: { Status: 'healthy' } },
   unhealthy: { Status: 'running', Running: true, Health: { Status: 'unhealthy' } },
+  starting: { Status: 'running', Running: true, Health: { Status: 'starting' } },
   exited: { Status: 'exited', Running: false, ExitCode: 1 },
 };
 if (mode === 'missing') { console.error('Error: No such container: web'); process.exit(1); }
@@ -88,6 +89,7 @@ describe('docker check', () => {
     const unhealthy = await run('unhealthy', 'healthy');
     assert.equal(unhealthy.status, 'FAIL');
     assert.equal(unhealthy.summary, 'container health is unhealthy');
+    assert.equal((await run('starting', 'healthy')).status, 'FAIL');
   });
 
   it('never passes health for a container without a HEALTHCHECK', async () => {

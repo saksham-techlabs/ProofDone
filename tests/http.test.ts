@@ -30,6 +30,13 @@ describe('http check (real local server)', () => {
       res.end();
     } else if (req.url === '/slow') {
       // Never responds.
+    } else if (req.url === '/slow-body') {
+      res.writeHead(200);
+      res.write('started');
+    } else if (req.url === '/large') {
+      res.end('x'.repeat(1024 * 1024) + 'needle');
+    } else if (req.url === '/exact-limit') {
+      res.end('x'.repeat(1024 * 1024));
     } else {
       res.writeHead(404);
       res.end('not found');
@@ -107,5 +114,22 @@ describe('http check (real local server)', () => {
     const outcome = await httpCheck.run({ ...check('/'), url: `http://127.0.0.1:${port}/health` }, ctx);
     assert.equal(outcome.status, 'FAIL');
     assert.match(outcome.summary, /connection refused/);
+  });
+
+  it('times out while reading a body after receiving headers', async () => {
+    const outcome = await httpCheck.run(check('/slow-body', { timeoutMs: 300 }), ctx);
+    assert.equal(outcome.status, 'FAIL');
+    assert.equal(outcome.evidence?.timedOut, true);
+  });
+
+  it('reports incomplete body evidence without claiming the required text is absent', async () => {
+    const missing = await httpCheck.run(check('/large', { bodyContains: 'needle' }), ctx);
+    assert.equal(missing.status, 'NOT_CHECKED');
+    assert.equal(missing.evidence?.bodyTruncated, true);
+    const found = await httpCheck.run(check('/large', { bodyContains: 'xxx' }), ctx);
+    assert.equal(found.status, 'PASS');
+    const exact = await httpCheck.run(check('/exact-limit', { bodyContains: 'needle' }), ctx);
+    assert.equal(exact.status, 'FAIL');
+    assert.equal(exact.evidence?.bodyTruncated, false);
   });
 });

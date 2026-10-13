@@ -1,6 +1,6 @@
 import { readFile, stat } from 'node:fs/promises';
 import { capList } from '../../core/output.js';
-import { resolveInProject } from '../../core/paths.js';
+import { realPathInProject, resolveInProject } from '../../core/paths.js';
 import type { FileContentCheckConfig } from '../../types/index.js';
 import type { CheckDefinition, CheckOutcome } from '../definition.js';
 import { locate } from './locate.js';
@@ -9,11 +9,16 @@ export const MAX_CONTENT_FILE_BYTES = 5 * 1024 * 1024;
 const MAX_LINES_REPORTED = 10;
 
 /** 1-based line numbers on which `needle` occurs. Matched text itself is never reported. */
-function matchingLines(lines: readonly string[], needle: string): number[] {
+function matchingLines(haystack: string, needle: string): number[] {
   const result: number[] = [];
-  lines.forEach((line, index) => {
-    if (line.includes(needle)) result.push(index + 1);
-  });
+  let line = 1;
+  let scanned = 0;
+  let position = haystack.indexOf(needle);
+  while (position !== -1) {
+    for (; scanned < position; scanned++) if (haystack[scanned] === '\n') line++;
+    if (result.at(-1) !== line) result.push(line);
+    position = haystack.indexOf(needle, position + 1);
+  }
   return result;
 }
 
@@ -30,7 +35,7 @@ export const fileContentCheck: CheckDefinition<FileContentCheckConfig> = {
       notContains: reader.stringArray('notContains'),
       ignoreCase: reader.boolean('ignoreCase', false),
     };
-    if (!reader.has('contains') && !reader.has('notContains')) {
+    if (config.contains.length + config.notContains.length === 0) {
       reader.issue('contains', 'a file-content check needs at least one of "contains" or "notContains"');
     }
     return config;
@@ -57,7 +62,7 @@ export const fileContentCheck: CheckDefinition<FileContentCheckConfig> = {
       return { status: 'ERROR', summary: `${config.path} is not a regular file`, evidence };
     }
 
-    const absolute = resolveInProject(context.projectRoot, config.path);
+    const absolute = await realPathInProject(context.projectRoot, resolveInProject(context.projectRoot, config.path));
     const size = (await stat(absolute)).size;
     evidence.sizeBytes = size;
     if (size > MAX_CONTENT_FILE_BYTES) {
@@ -69,13 +74,15 @@ export const fileContentCheck: CheckDefinition<FileContentCheckConfig> = {
     }
 
     const raw = await readFile(absolute, 'utf8');
-    const normalize = (text: string): string => (config.ignoreCase ? text.toLowerCase() : text);
-    const lines = normalize(raw).split(/\r\n|\r|\n/);
-    const haystack = lines.join('\n');
+    const normalize = (text: string): string => {
+      const normalized = text.replace(/\r\n?/g, '\n');
+      return config.ignoreCase ? normalized.toLowerCase() : normalized;
+    };
+    const haystack = normalize(raw);
 
     const missingText = config.contains.filter((needle) => !haystack.includes(normalize(needle)));
     const forbiddenFound = config.notContains
-      .map((needle) => ({ text: needle, lines: matchingLines(lines, normalize(needle)) }))
+      .map((needle) => ({ text: needle, lines: matchingLines(haystack, normalize(needle)) }))
       .filter((match) => match.lines.length > 0);
 
     Object.assign(evidence, {

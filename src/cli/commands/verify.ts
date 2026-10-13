@@ -1,6 +1,7 @@
 import path from 'node:path';
 import { loadConfig, resolveConfigPath } from '../../config/load.js';
 import { ProofDoneError } from '../../core/errors.js';
+import { sanitizeOutput } from '../../core/output.js';
 import { runVerification } from '../../core/runner.js';
 import { exitCodeFor } from '../../core/verdict.js';
 import { createColors } from '../../reporters/color.js';
@@ -50,7 +51,7 @@ export async function runVerify(options: VerifyOptions, io: CliIO): Promise<numb
     strict: options.strict,
     ...(only ? { only } : {}),
     onCheckStart: showProgress
-      ? (check, index, total) => io.stderr.write(`[${index + 1}/${total}] ${check.name} ...\n`)
+      ? (check, index, total) => io.stderr.write(`[${index + 1}/${total}] ${sanitizeOutput(check.name)} ...\n`)
       : undefined,
     onCheckComplete: showProgress
       ? (result, index, total) => io.stderr.write(`[${index + 1}/${total}] ${result.name}: ${statusLabel(result.status)}\n`)

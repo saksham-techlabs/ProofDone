@@ -13,7 +13,7 @@ export const filesCheck: CheckDefinition<FilesCheckConfig> = {
       mustExist: reader.pathArray('mustExist'),
       mustNotExist: reader.pathArray('mustNotExist'),
     };
-    if (!reader.has('mustExist') && !reader.has('mustNotExist')) {
+    if (config.mustExist.length + config.mustNotExist.length === 0) {
       reader.issue('mustExist', 'a files check needs at least one of "mustExist" or "mustNotExist"');
     }
     return config;

@@ -20,6 +20,10 @@
   "files": [
     "dist",
     "schema",
+    "docs",
+    "examples",
+    "SECURITY.md",
+    "CONTRIBUTING.md",
     "README.md",
     "LICENSE",
     "CHANGELOG.md"
@@ -47,6 +51,7 @@
     "lint": "eslint .",
     "test": "npm run build:test && node --test --test-reporter=spec \".test-build/tests/**/*.test.js\"",
     "selfcheck": "node dist/cli/main.js validate",
+    "smoke": "node scripts/smoke.mjs",
     "check": "npm run typecheck && npm run lint && npm run test && npm run build && npm run selfcheck",
     "prepack": "npm run build"
   },

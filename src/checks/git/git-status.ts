@@ -32,10 +32,19 @@ export type GitProbe = { kind: 'ok'; status: GitStatus } | GitFailure;
  */
 export function runGit(context: CheckContext, args: readonly string[], timeoutMs: number): Promise<ProcessResult> {
   const { command, args: prefix } = context.tools.git;
-  return runProcess(command, [...prefix, ...args], {
+  const env = { ...process.env, GIT_OPTIONAL_LOCKS: '0', GIT_TERMINAL_PROMPT: '0', LC_ALL: 'C' };
+  // Git hooks and parent tools may export repository selectors. They must not
+  // redirect --cwd verification to a different repository or index.
+  for (const key of Object.keys(env)) {
+    if (['GIT_DIR', 'GIT_WORK_TREE', 'GIT_COMMON_DIR', 'GIT_INDEX_FILE', 'GIT_OBJECT_DIRECTORY',
+      'GIT_ALTERNATE_OBJECT_DIRECTORIES', 'GIT_NAMESPACE', 'GIT_PREFIX'].includes(key.toUpperCase())) {
+      Reflect.deleteProperty(env, key);
+    }
+  }
+  return runProcess(command, [...prefix, '-c', 'core.fsmonitor=false', ...args], {
     cwd: context.projectRoot,
     timeoutMs,
-    env: { ...process.env, GIT_OPTIONAL_LOCKS: '0', GIT_TERMINAL_PROMPT: '0', LC_ALL: 'C' },
+    env,
   });
 }
 
@@ -48,6 +57,7 @@ export function classifyGitFailure(result: ProcessResult): GitFailure | undefine
     return { kind: 'unavailable', message };
   }
   if (result.timedOut) return { kind: 'unavailable', message: 'git did not respond before the timeout' };
+  if (result.outputTruncated) return { kind: 'error', message: 'git output was truncated; complete evidence is unavailable' };
   if (result.exitCode !== 0) {
     const stderr = sanitizeOutput(result.stderr);
     if (/not a git repository/i.test(stderr)) {
@@ -62,10 +72,15 @@ export function classifyGitFailure(result: ProcessResult): GitFailure | undefine
 export async function probeGit(context: CheckContext, timeoutMs = DEFAULT_GIT_TIMEOUT_MS): Promise<GitProbe> {
   const result = await runGit(
     context,
-    ['status', '--porcelain=v2', '--branch', '-z', '--untracked-files=all'],
+    ['status', '--porcelain=v2', '--branch', '-z', '--untracked-files=all', '--ignore-submodules=none'],
     timeoutMs,
   );
-  return classifyGitFailure(result) ?? { kind: 'ok', status: parsePorcelainV2(result.stdout) };
+  const failure = classifyGitFailure(result);
+  if (failure) return failure;
+  if (!result.stdout.startsWith('# branch.oid ') || !result.stdout.includes('\0# branch.head ') || !result.stdout.endsWith('\0')) {
+    return { kind: 'error', message: 'git status returned incomplete or unexpected evidence' };
+  }
+  return { kind: 'ok', status: parsePorcelainV2(result.stdout) };
 }
 
 /** Takes the remainder of a line after `count` space-separated fields. */

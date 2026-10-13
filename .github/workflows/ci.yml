@@ -48,6 +48,9 @@ jobs:
       - name: Dogfood - ProofDone verifies its own repository after the build
         run: node dist/cli/main.js verify --only required-files,license,git-clean
 
+      - name: Build, pack and verify the installed executable
+        run: npm run smoke
+
       - name: CLI smoke test against a temporary project
         shell: bash
         run: |

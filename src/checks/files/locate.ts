@@ -1,5 +1,6 @@
-import { readdir, stat } from 'node:fs/promises';
+import { lstat, readdir, stat } from 'node:fs/promises';
 import path from 'node:path';
+import { realPathInProject } from '../../core/paths.js';
 
 export type Presence =
   | { state: 'present'; kind: 'file' | 'directory' | 'other' }
@@ -42,13 +43,19 @@ export async function locate(projectRoot: string, relativePath: string): Promise
     }
     actual.push(match);
     current = path.join(current, match);
+    try {
+      if ((await lstat(current)).isSymbolicLink()) await realPathInProject(projectRoot, current);
+    } catch (error) {
+      return { state: 'unreadable', message: error instanceof Error ? error.message : 'cannot inspect path' };
+    }
   }
 
   if (mismatch) return { state: 'case-mismatch', actual: actual.join('/') };
   try {
     return { state: 'present', kind: await kindOf(current) };
-  } catch {
-    // Dangling symlinks are listed by readdir but cannot be stat'ed.
-    return { state: 'missing' };
+  } catch (error) {
+    const code = (error as NodeJS.ErrnoException).code;
+    if (code === 'ENOENT' || code === 'ENOTDIR') return { state: 'missing' };
+    return { state: 'unreadable', message: `cannot inspect path: ${code ?? 'unknown error'}` };
   }
 }

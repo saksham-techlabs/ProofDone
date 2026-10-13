@@ -63,7 +63,7 @@ export function validateConfig(raw: unknown): ValidationResult {
     return { issues: [{ path: '(root)', message: 'config must be a JSON object' }] };
   }
   const reader = new FieldReader(raw, '(root)', issues);
-  reader.allow('$schema');
+  reader.optionalString('$schema');
 
   if (raw.version !== undefined && raw.version !== 1) {
     reader.issue('version', 'unsupported config version (only 1 is supported)');

@@ -33,6 +33,7 @@ Consequences:
   `"required": false` instead of relying on it being skipped.
 - Optional checks are always run and reported. When the verdict is `DONE`, the reason mentions
   how many optional checks did not pass.
+- A run with no required checks may be DONE but establishes no required claims; the reason says so.
 - `--only` restricts the run, and the verdict covers only the checks that ran. The report
   includes an `only` field so a partial run cannot be mistaken for a full one.
 
@@ -44,4 +45,4 @@ Consequences:
 | 1    | `NOT_DONE`                                                                       |
 | 2    | ProofDone could not run verification: usage error, missing/invalid config, or an internal error. With `--json`, an error document is printed. |
 | 3    | `UNVERIFIED`                                                                     |
-| 130/143 | Interrupted by SIGINT/SIGTERM. Running commands are terminated.               |
+| 130/143 | Interrupted by SIGINT/SIGTERM. Process-tree termination is attempted.         |

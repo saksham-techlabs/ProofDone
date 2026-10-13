@@ -1,9 +1,4 @@
-const ESC = String.fromCharCode(27);
-const BEL = String.fromCharCode(7);
-const ANSI_PATTERN = new RegExp(
-  `${ESC}\\[[0-?]*[ -/]*[@-~]|${ESC}\\][^${BEL}${ESC}]*(?:${BEL}|${ESC}\\\\)`,
-  'g',
-);
+import { stripVTControlCharacters } from 'node:util';
 
 /** Best-effort patterns for well-known credential formats. */
 const SECRET_PATTERNS: readonly RegExp[] = [
@@ -21,7 +16,7 @@ const MIN_LITERAL_SECRET_LENGTH = 8;
 export const REDACTED = '[REDACTED]';
 
 export function stripAnsi(text: string): string {
-  return text.replace(ANSI_PATTERN, '');
+  return stripVTControlCharacters(text);
 }
 
 /**
@@ -43,7 +38,23 @@ export function redact(text: string, literals: readonly string[] = []): string {
 
 /** Normalizes line endings, strips ANSI escapes and redacts secrets. */
 export function sanitizeOutput(text: string, literals: readonly string[] = []): string {
-  return redact(stripAnsi(text).replace(/\r\n?/g, '\n'), literals);
+  const clean = stripAnsi(text).replace(/\r\n?/g, '\n');
+  // Preserve printable text, tabs and newlines; remove remaining terminal controls.
+  return redact(Array.from(clean).filter((char) => {
+    const code = char.charCodeAt(0);
+    return code === 9 || code === 10 || (code >= 32 && (code < 127 || code > 159));
+  }).join(''), literals);
+}
+
+/** Sanitize report strings before either reporter sees them; preserve structure and numbers. */
+export function sanitizeValue<T>(value: T, literals: readonly string[] = []): T {
+  if (typeof value === 'string') return sanitizeOutput(value, literals) as T;
+  if (Array.isArray(value)) return value.map((entry: unknown) => sanitizeValue(entry, literals)) as T;
+  if (value !== null && typeof value === 'object') {
+    return Object.fromEntries(Object.entries(value).map(([key, entry]: [string, unknown]) =>
+      [key, sanitizeValue(entry, literals)])) as T;
+  }
+  return value;
 }
 
 /** Returns the last `maxLines` non-empty lines, limited to roughly `maxChars` characters. */

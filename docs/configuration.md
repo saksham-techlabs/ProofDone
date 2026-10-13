@@ -6,6 +6,8 @@ ProofDone reads `proofdone.config.json` from the current directory, or the file 
 - The **project root** is the directory that contains the config file.
 - Every relative path in the config (`cwd`, `mustExist`, `path`, ...) resolves against the
   project root and must stay inside it. Absolute paths and `..` escapes are rejected.
+- Existing symlinks/junctions must resolve inside the project. Dangling links produce ERROR.
+- `--cwd` and `--config` are explicit CLI locations and may be absolute or outside the current directory.
 - Both `/` and `\` work as path separators, so one config works on Windows, Linux and macOS.
 - The file must be JSON (a UTF-8 byte-order mark is tolerated). Comments are not allowed.
 
@@ -27,7 +29,7 @@ Any other top-level key is an error.
 | `type`      | string  | -       | Required. See below.                                                   |
 | `name`      | string  | `id`    | Display name in reports.                                               |
 | `required`  | boolean | `true`  | If `false`, the result is reported but never affects the verdict.      |
-| `timeoutMs` | integer | varies  | Timeout for this check (1 ms to 24 h).                                 |
+| `timeoutMs` | integer | varies  | Timeout per external process or HTTP request (1 ms to 24 h); unused by filesystem checks. |
 
 Unknown fields on a check are errors, so typos fail loudly instead of being ignored.
 
@@ -41,7 +43,7 @@ Runs a command through the platform shell (`cmd.exe` on Windows, `/bin/sh` elsew
 | `cwd`            | path             | `.`        | Working directory, relative to the project root. |
 | `env`            | object of string | `{}`       | Extra environment variables (merged over the current environment). Values of 8+ characters are redacted from captured output. |
 | `expectExitCode` | integer 0-255    | `0`        | Exit code that counts as PASS.                  |
-| `timeoutMs`      | integer          | `600000`   | The process tree is killed after this time.     |
+| `timeoutMs`      | integer          | `600000`   | Process-tree termination is attempted after this time. |
 
 - **PASS**: the exit code equals `expectExitCode`.
 - **FAIL**: any other exit code, killed by a signal, timed out, or command not found.
@@ -68,6 +70,9 @@ NOT CHECKED if git is not installed.
 
 Uses `git status --porcelain=v2 --untracked-files=all` for the whole repository (including when
 the project root is a subdirectory). Ignored files (`.gitignore`) never count.
+Inherited Git repository/index selectors are cleared. Git fsmonitor hooks are disabled and
+submodule changes are included despite submodule ignore settings. Git's tracked-file flags
+(such as `assume-unchanged` or `skip-worktree`) still follow Git semantics; this is not a byte-for-byte integrity scan.
 
 - **PASS**: no staged, unstaged, conflicted or untracked changes.
 - **WARNING**: only untracked files, and `allowUntracked` is `true`.
@@ -101,7 +106,8 @@ fetch**. ProofDone never runs `git fetch`. Run it yourself first if you need cur
 | `mustExist`    | array of path | Files or directories that must exist.   |
 | `mustNotExist` | array of path | Files or directories that must not exist. |
 
-At least one of the two is required. Names are compared **case-sensitively on every platform**:
+At least one rule across the two arrays is required; empty rule sets are rejected.
+Names are compared **case-sensitively on every platform**:
 if `README.md` is required but the file is `readme.md`, the check reports WARNING. Windows and
 macOS would accept that name, but Linux (and most CI machines) would not.
 
@@ -114,9 +120,10 @@ macOS would accept that name, but Linux (and most CI machines) would not.
 | `notContains` | array of string | `[]`    | Literal texts that must not appear.       |
 | `ignoreCase`  | boolean         | `false` | Case-insensitive matching.                |
 
-At least one of `contains` / `notContains` is required. Matching is literal substring matching,
+At least one non-empty rule across `contains` / `notContains` is required. Matching is literal substring matching,
 with no regular expressions. Forbidden matches are reported by **line number only**, so a secret
 in the file is not copied into the report. A missing file is FAIL. A file larger than 5 MB is ERROR.
+Multiline rules are supported; CRLF and CR are normalized to LF in both rules and file content.
 
 Typical uses: placeholder text removed (`"Lorem ipsum"`), no leftover `debugger` statements,
 a required config key present in `.env.example`, no live key prefixes (`"sk_live_"`) committed.
@@ -133,7 +140,8 @@ a required config key present in `.env.example`, no live key prefixes (`"sk_live
 
 Redirects are followed and the final URL is recorded. Up to 1 MB of the body is read; a
 300-character redacted snippet is kept as evidence. Connection refused, DNS failure and timeout
-are all **FAIL**, because the claim "the service is running" is false in each case.
+are all **FAIL**: the configured request did not succeed from this machine. This does not prove
+the server itself is stopped. A missing body match with truncated evidence is **NOT_CHECKED**.
 
 ProofDone never starts your server. Start it first, or mark the check `"required": false`.
 

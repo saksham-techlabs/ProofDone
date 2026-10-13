@@ -4,6 +4,7 @@ import type { CheckConfig, CheckResult, ProofDoneConfig, VerificationReport } fr
 import { VERSION } from '../version.js';
 import { errorMessage } from './errors.js';
 import { computeVerdict } from './verdict.js';
+import { sanitizeValue } from './output.js';
 
 export interface RunVerificationOptions {
   config: ProofDoneConfig;
@@ -37,7 +38,7 @@ export async function runVerification(options: RunVerificationOptions): Promise<
     } catch (error) {
       outcome = { status: 'ERROR', summary: `check crashed: ${errorMessage(error)}` };
     }
-    const result: CheckResult = {
+    const result: CheckResult = sanitizeValue({
       id: check.id,
       name: check.name,
       type: check.type,
@@ -47,7 +48,7 @@ export async function runVerification(options: RunVerificationOptions): Promise<
       details: outcome.details ?? [],
       evidence: outcome.evidence ?? {},
       durationMs: Math.round(performance.now() - checkStarted),
-    };
+    }, check.type === 'command' ? Object.values(check.env) : []);
     results.push(result);
     options.onCheckComplete?.(result, index, checks.length);
   }
@@ -69,5 +70,5 @@ export async function runVerification(options: RunVerificationOptions): Promise<
     checks: results,
   };
   if (only) report.only = only;
-  return report;
+  return sanitizeValue(report);
 }

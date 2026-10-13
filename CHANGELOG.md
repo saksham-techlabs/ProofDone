@@ -6,6 +6,22 @@ All notable changes to this project are documented here. The format is based on
 
 ## [Unreleased]
 
+### Fixed
+
+- Reject empty file rule sets; detect multiline forbidden text with normalized line endings.
+- Reject symlink/junction escapes and dangling links instead of reporting misleading file results.
+- Reject truncated Git evidence and malformed Docker state; protect Docker operands from option parsing.
+- Disable Git fsmonitor hooks and include submodule dirtiness despite ignore settings.
+- Ignore inherited Git repository/index selectors so checks inspect the selected project.
+- Sanitize terminal controls and redact recognized secrets consistently in verification reports.
+- Report incomplete HTTP body evidence as NOT_CHECKED and enforce the 1 MiB read limit.
+- Clarify warning/optional-only verdict reasons, command permissions and cleanup limitations.
+
+### Added
+
+- Release regression coverage and a package smoke test on every OS/Node CI matrix entry.
+- Ship referenced documentation and examples in the npm artifact.
+
 ## [0.1.0] - Unreleased
 
 Initial version (not yet published to npm).

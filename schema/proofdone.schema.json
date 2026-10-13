@@ -117,7 +117,10 @@
       "type": "object",
       "additionalProperties": false,
       "required": ["id", "type"],
-      "anyOf": [{ "required": ["mustExist"] }, { "required": ["mustNotExist"] }],
+      "anyOf": [
+        { "required": ["mustExist"], "properties": { "mustExist": { "minItems": 1 } } },
+        { "required": ["mustNotExist"], "properties": { "mustNotExist": { "minItems": 1 } } }
+      ],
       "properties": {
         "id": { "$ref": "#/$defs/id" },
         "name": { "$ref": "#/$defs/name" },
@@ -132,7 +135,10 @@
       "type": "object",
       "additionalProperties": false,
       "required": ["id", "type", "path"],
-      "anyOf": [{ "required": ["contains"] }, { "required": ["notContains"] }],
+      "anyOf": [
+        { "required": ["contains"], "properties": { "contains": { "minItems": 1 } } },
+        { "required": ["notContains"], "properties": { "notContains": { "minItems": 1 } } }
+      ],
       "properties": {
         "id": { "$ref": "#/$defs/id" },
         "name": { "$ref": "#/$defs/name" },
@@ -147,6 +153,8 @@
     },
     "http": {
       "type": "object",
+      "if": { "required": ["method"], "properties": { "method": { "const": "HEAD" } } },
+      "then": { "not": { "required": ["bodyContains"] } },
       "additionalProperties": false,
       "required": ["id", "type", "url"],
       "properties": {

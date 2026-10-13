@@ -1,5 +1,5 @@
 import path from 'node:path';
-import { formatDuration, truncate } from '../core/output.js';
+import { formatDuration, sanitizeValue, truncate } from '../core/output.js';
 import type { CheckResult, CheckStatus, Verdict, VerificationReport } from '../types/index.js';
 import { plainColors, type Colors } from './color.js';
 
@@ -37,6 +37,7 @@ function displayName(result: CheckResult): string {
 
 /** Renders the human-readable report. Output is ASCII-only for legacy Windows consoles. */
 export function renderTextReport(report: VerificationReport, c: Colors = plainColors): string {
+  report = sanitizeValue(report);
   const lines: string[] = [];
   const nameWidth = Math.min(MAX_NAME_WIDTH, Math.max(0, ...report.checks.map((r) => displayName(r).length)));
 

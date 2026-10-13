@@ -207,6 +207,9 @@ export const gitUpstreamCheck: CheckDefinition<GitUpstreamCheckConfig> = {
     if (problems.length > 0) {
       return { status: 'FAIL', summary: `${problems.join(', ')} (${s.upstream})`, details: [position, note], evidence };
     }
-    return { status: 'PASS', summary: `in sync with ${s.upstream}`, details: [position, note], evidence };
+    const summary = s.ahead === 0 && s.behind === 0
+      ? `in sync with ${s.upstream}`
+      : `${position} (allowed by configuration)`;
+    return { status: 'PASS', summary, details: [position, note], evidence };
   },
 };

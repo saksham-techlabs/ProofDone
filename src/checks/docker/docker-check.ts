@@ -1,5 +1,6 @@
 import { sanitizeOutput, tailLines } from '../../core/output.js';
 import { runProcess } from '../../core/process.js';
+import { isPlainObject } from '../../config/reader.js';
 import type { DockerCheckConfig, DockerExpectation } from '../../types/index.js';
 import type { CheckDefinition, CheckOutcome } from '../definition.js';
 
@@ -10,7 +11,7 @@ interface ContainerState {
   Status?: string;
   Running?: boolean;
   ExitCode?: number;
-  Health?: { Status?: string };
+  Health?: { Status?: string } | null;
 }
 
 export const dockerCheck: CheckDefinition<DockerCheckConfig> = {
@@ -35,7 +36,7 @@ export const dockerCheck: CheckDefinition<DockerCheckConfig> = {
     const evidence: Record<string, unknown> = { container: config.container, expect: config.expect };
     const result = await runProcess(
       command,
-      [...args, 'inspect', '--type', 'container', '--format', '{{json .State}}', config.container],
+      [...args, 'inspect', '--type', 'container', '--format', '{{json .State}}', '--', config.container],
       { cwd: context.projectRoot, timeoutMs: config.timeoutMs ?? DEFAULT_DOCKER_TIMEOUT_MS },
     );
 
@@ -48,6 +49,9 @@ export const dockerCheck: CheckDefinition<DockerCheckConfig> = {
     }
     if (result.timedOut) {
       return { status: 'NOT_CHECKED', summary: 'docker inspect did not respond before the timeout', evidence };
+    }
+    if (result.outputTruncated) {
+      return { status: 'ERROR', summary: 'docker inspect output was truncated', evidence };
     }
 
     const stderr = sanitizeOutput(result.stderr);
@@ -69,7 +73,12 @@ export const dockerCheck: CheckDefinition<DockerCheckConfig> = {
 
     let state: ContainerState;
     try {
-      state = JSON.parse(result.stdout.trim()) as ContainerState;
+      const parsed: unknown = JSON.parse(result.stdout.trim());
+      if (!isPlainObject(parsed) || typeof parsed.Status !== 'string' || !parsed.Status || typeof parsed.Running !== 'boolean' ||
+          (parsed.Health !== undefined && parsed.Health !== null && (!isPlainObject(parsed.Health) || typeof parsed.Health.Status !== 'string'))) {
+        return { status: 'ERROR', summary: 'docker inspect returned an invalid container state', evidence };
+      }
+      state = parsed as ContainerState;
     } catch {
       return { status: 'ERROR', summary: 'could not parse docker inspect output', evidence };
     }

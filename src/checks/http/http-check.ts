@@ -16,9 +16,10 @@ async function readBody(response: Response): Promise<{ text: string; truncated: 
   for (;;) {
     const { done, value } = await reader.read();
     if (done) break;
-    chunks.push(value);
-    size += value.byteLength;
-    if (size >= MAX_BODY_BYTES) {
+    const remaining = MAX_BODY_BYTES - size;
+    chunks.push(value.subarray(0, remaining));
+    size += Math.min(value.byteLength, remaining);
+    if (value.byteLength > remaining) {
       truncated = true;
       await reader.cancel();
       break;
@@ -132,6 +133,9 @@ export const httpCheck: CheckDefinition<HttpCheckConfig> = {
     if (config.bodyContains !== undefined) {
       const found = body.text.includes(config.bodyContains);
       evidence.bodyContainsFound = found;
+      if (!found && body.truncated && problems.length === 0) {
+        return { status: 'NOT_CHECKED', summary: 'response body exceeded 1 MB; required text was not found in the inspected prefix', evidence };
+      }
       if (!found) problems.push(`response body does not contain ${JSON.stringify(config.bodyContains)}`);
     }
 

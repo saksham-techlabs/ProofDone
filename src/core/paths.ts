@@ -1,4 +1,16 @@
 import path from 'node:path';
+import { realpath } from 'node:fs/promises';
+
+/** Resolve existing paths and reject symlinks/junctions that leave the project. */
+export async function realPathInProject(projectRoot: string, target: string): Promise<string> {
+  const root = await realpath(projectRoot);
+  const resolved = await realpath(target);
+  const relative = path.relative(root, resolved);
+  if (relative === '..' || relative.startsWith(`..${path.sep}`) || path.isAbsolute(relative)) {
+    throw new Error('path resolves outside the project root');
+  }
+  return resolved;
+}
 
 /**
  * Validates a config path that must be relative to the project root and stay inside it.
