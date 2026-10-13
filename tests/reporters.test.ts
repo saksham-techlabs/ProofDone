@@ -74,6 +74,20 @@ describe('text reporter', () => {
     assert.ok(/^[\x20-\x7e\n]*$/.test(text), 'output is ASCII-only for legacy consoles');
   });
 
+  it('keeps columns aligned for long names', () => {
+    const report = makeReport();
+    const first = report.checks[0];
+    assert.ok(first);
+    report.checks[0] = { ...first, name: 'A very long check name that goes on and on beyond the column' };
+    const rows = renderTextReport(report)
+      .split('\n')
+      .filter((line) => /^ {2}\S.*\s(PASS|FAIL|NOT CHECKED)\s/.test(line));
+    assert.equal(rows.length, 3);
+    const statusColumns = rows.map((line) => line.search(/(PASS|FAIL|NOT CHECKED)/));
+    assert.equal(new Set(statusColumns).size, 1, 'status column must line up');
+    assert.ok(rows[0]?.includes('...'));
+  });
+
   it('applies colors only when enabled', () => {
     const colored = renderTextReport(makeReport(), createColors({ isTTY: true, env: {} }));
     assert.ok(colored.includes('\u001b[31m'));

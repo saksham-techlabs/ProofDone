@@ -18,14 +18,14 @@ ProofDone Verification
 Project: /home/dev/acme-api
 Config:  proofdone.config.json
 
-  Typecheck                PASS         exit 0 in 3.1s
-  Lint                     PASS         exit 0 in 2.4s
-  Tests                    PASS         exit 0 in 8.7s
-  Build                    PASS         exit 0 in 5.2s
-  Required files           PASS         all 5 path rule(s) satisfied
-  HTTP health endpoint     PASS         200 in 14ms
-  Git working tree         FAIL         working tree has uncommitted changes: 2 unstaged, 1 untracked
-  Docker health (optional) NOT CHECKED  Docker CLI not found on PATH
+  Typecheck                 PASS         exit 0 in 3.1s
+  Lint                      PASS         exit 0 in 2.4s
+  Tests                     PASS         exit 0 in 8.7s
+  Build                     PASS         exit 0 in 5.2s
+  Required files            PASS         all 5 path rule(s) satisfied
+  HTTP health endpoint      PASS         200 in 14ms
+  Git working tree          FAIL         working tree has uncommitted changes: 2 unstaged, 1 untracked
+  Docker health (optional)  NOT CHECKED  Docker CLI not found on PATH
 
 Evidence
   FAIL  Git working tree
@@ -33,7 +33,7 @@ Evidence
       unstaged: src/db/schema.ts
       untracked: src/routes/users.test.ts
 
-6 passed, 1 failed, 0 warning, 1 not checked, 0 error (8 checks in 19.6s)
+6 passed, 1 failed, 0 warnings, 1 not checked, 0 errors (8 checks in 19.6s)
 
 Final verdict: NOT DONE
 Reason: Required check failed: Git working tree (working tree has uncommitted changes: 2 unstaged, 1 untracked).

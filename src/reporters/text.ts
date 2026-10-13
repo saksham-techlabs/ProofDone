@@ -1,5 +1,5 @@
 import path from 'node:path';
-import { formatDuration } from '../core/output.js';
+import { formatDuration, truncate } from '../core/output.js';
 import type { CheckResult, CheckStatus, Verdict, VerificationReport } from '../types/index.js';
 import { plainColors, type Colors } from './color.js';
 
@@ -18,7 +18,7 @@ const VERDICT_LABELS: Record<Verdict, string> = {
 };
 
 const STATUS_WIDTH = Math.max(...Object.values(STATUS_LABELS).map((label) => label.length));
-const MAX_NAME_WIDTH = 32;
+const MAX_NAME_WIDTH = 40;
 
 export function statusLabel(status: CheckStatus): string {
   return STATUS_LABELS[status];
@@ -46,7 +46,7 @@ export function renderTextReport(report: VerificationReport, c: Colors = plainCo
   lines.push('');
 
   for (const result of report.checks) {
-    const name = displayName(result).padEnd(nameWidth);
+    const name = truncate(displayName(result), nameWidth).padEnd(nameWidth);
     const status = colorStatus(result.status, statusLabel(result.status).padEnd(STATUS_WIDTH), c);
     lines.push(`  ${name}  ${status}  ${c.gray(result.summary)}`);
   }

@@ -86,11 +86,10 @@ export const fileContentCheck: CheckDefinition<FileContentCheckConfig> = {
     });
 
     if (missingText.length === 0 && forbiddenFound.length === 0) {
-      return {
-        status: 'PASS',
-        summary: `${config.contains.length} required and ${config.notContains.length} forbidden text rule(s) satisfied`,
-        evidence,
-      };
+      const parts: string[] = [];
+      if (config.contains.length) parts.push(`${config.contains.length} required text(s) found`);
+      if (config.notContains.length) parts.push(`${config.notContains.length} forbidden text(s) absent`);
+      return { status: 'PASS', summary: `${config.path}: ${parts.join(', ')}`, evidence };
     }
 
     const details: string[] = [];

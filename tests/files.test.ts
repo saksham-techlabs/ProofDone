@@ -101,6 +101,7 @@ describe('file-content check', () => {
       context(dir),
     );
     assert.equal(outcome.status, 'PASS');
+    assert.equal(outcome.summary, 'src/config.ts: 1 required text(s) found, 2 forbidden text(s) absent');
   });
 
   it('fails when required text is missing', async () => {
