@@ -255,7 +255,7 @@ proofdone --version
 | `--only`      | Comma-separated check ids to run, e.g. `--only build,tests`                 |
 | `--strict`    | Treat WARNING on a required check as NOT DONE                               |
 | `--quiet`     | Do not print `[1/5] Build ...` progress lines (they go to stderr)           |
-| `--no-color`  | Disable colors. `NO_COLOR` and `FORCE_COLOR` are also honored, and output that is not a terminal is never colored |
+| `--no-color`  | Disable colors. Colors are only used on a terminal; `NO_COLOR` disables and `FORCE_COLOR` enables them |
 | `--force`     | `init` only: overwrite an existing config                                   |
 
 `validate` runs nothing. It confirms the config is valid and lists every command that `verify`

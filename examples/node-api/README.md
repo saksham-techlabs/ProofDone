@@ -31,4 +31,39 @@ repository, when run from a checkout).
 
 ## Sample output
 
-OUTPUT_PLACEHOLDER
+Captured from real runs of this example on Windows with Node.js 24 and without Docker installed.
+Only the project path was shortened to `<repo>`. Timings will differ on your machine.
+
+With the server running:
+
+```text
+ProofDone Verification
+Project: <repo>/examples/node-api
+Config:  proofdone.config.json
+
+  Tests                     PASS         exit 0 in 1.2s
+  Required files            PASS         all 5 path rule(s) satisfied
+  No debug leftovers        PASS         src/server.js: 3 forbidden text(s) absent
+  HTTP health endpoint      PASS         200 in 80ms
+  Git working tree          PASS         working tree clean on main
+  Docker health (optional)  NOT CHECKED  Docker CLI not found on PATH
+
+5 passed, 0 failed, 0 warnings, 1 not checked, 0 errors (6 checks in 1.3s)
+
+Final verdict: DONE
+Reason: All 5 required checks passed (1 optional check did not pass).
+```
+
+Exit code `0`. Docker is optional here, so its NOT CHECKED status is reported but does not
+block the verdict. If it were required, the verdict would be UNVERIFIED (exit code `3`).
+
+With the server stopped:
+
+```text
+  HTTP health endpoint      FAIL         request failed: connection refused (is the server running?)
+  ...
+Final verdict: NOT DONE
+Reason: Required check failed: HTTP health endpoint (request failed: connection refused (is the server running?)).
+```
+
+Exit code `1`.
