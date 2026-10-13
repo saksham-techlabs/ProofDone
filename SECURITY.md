@@ -6,10 +6,10 @@ ProofDone is pre-1.0. Security fixes are made on the latest released version onl
 
 ## Reporting a vulnerability
 
-Please **do not open a public issue** for security problems. Report them privately using the
-repository's GitHub private vulnerability reporting ("Security" tab, then "Report a vulnerability")
-once the public repository exists and the maintainer has enabled it. There is no public reporting
-endpoint yet. Enabling private vulnerability reporting is a repository-creation checklist item.
+Please **do not open a public issue** for security problems. Report them privately using
+GitHub private vulnerability reporting: open the repository's "Security" tab and choose
+"Report a vulnerability", or go directly to
+<https://github.com/saksham-techlabs/ProofDone/security/advisories/new>.
 Include steps to reproduce, the affected version, and the impact you expect.
 
 You can expect an acknowledgement within a few days. Once a fix is available, we will publish an

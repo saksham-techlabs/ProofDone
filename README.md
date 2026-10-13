@@ -118,7 +118,7 @@ ProofDone requires **Node.js 22 or newer**.
 From source:
 
 ```bash
-git clone <repository-url> proofdone
+git clone https://github.com/saksham-techlabs/ProofDone.git proofdone
 cd proofdone
 npm ci
 npm run build

@@ -3,6 +3,15 @@
   "version": "0.1.0",
   "description": "Evidence-based verification CLI for AI coding agents. The agent says \"done\" - ProofDone asks \"prove it\".",
   "license": "MIT",
+  "author": "Saksham Shrivastava",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/saksham-techlabs/ProofDone.git"
+  },
+  "homepage": "https://github.com/saksham-techlabs/ProofDone#readme",
+  "bugs": {
+    "url": "https://github.com/saksham-techlabs/ProofDone/issues"
+  },
   "type": "module",
   "bin": {
     "proofdone": "dist/cli/main.js"
